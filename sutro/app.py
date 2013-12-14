@@ -1,0 +1,59 @@
+import gevent
+
+from .config import parse_config, comma_delimited, base64, seconds
+from .dispatcher import MessageDispatcher
+from .socketserver import SocketServer
+from .source import MessageSource
+from .stats import StatsClient
+
+
+CONFIG_SPEC = {
+    "amqp": {
+        "host": str,
+        "port": int,
+        "vhost": str,
+        "username": str,
+        "password": str,
+    },
+
+    "web": {
+        "allowed_origins": comma_delimited,
+        "mac_secret": base64,
+        "max_mac_age": seconds,
+    },
+
+    "stats": {
+        "host": str,
+        "port": int,
+    },
+}
+
+
+def make_app(global_config, **local_config):
+    config = parse_config(local_config, CONFIG_SPEC)
+
+    stats = StatsClient(config.stats.host, config.stats.port)
+
+    dispatcher = MessageDispatcher(
+        stats=stats,
+    )
+
+    source = MessageSource(
+        host=config.amqp.host,
+        port=config.amqp.port,
+        vhost=config.amqp.vhost,
+        username=config.amqp.username,
+        password=config.amqp.password,
+        message_handler=dispatcher.on_message_received,
+    )
+
+    app = SocketServer(
+        dispatcher=dispatcher,
+        allowed_origins=config.web.allowed_origins,
+        mac_secret=config.web.mac_secret,
+        max_mac_age=config.web.max_mac_age,
+    )
+
+    gevent.spawn(source.pump_messages)
+
+    return app
