@@ -30,7 +30,7 @@ class MessageSource(object):
             host=self.host,
             port=self.port,
             vhost=self.vhost,
-            username=self.username,
+            user=self.username,
             password=self.password,
             transport="gevent",
             logger=LOG,
