@@ -1,0 +1,17 @@
+Source: sutro
+Section: python
+Priority: optional
+Standards-Version: 3.9.4
+Maintainer: Neil Williams <neil@spladug.net>
+Build-Depends: debhelper(>= 8.0.0),
+               python-all (>= 2.6.6-3),
+               python-setuptools (>=0.6b3)
+X-Python-Version: 2.7
+Homepage: https://github.com/spladug/sutro
+
+Package: sutro
+Architecture: all
+Depends: ${python:Depends}, ${misc:Depends}
+Description: Simple WebSocket broadcast server.
+ Sutro is a gevent based server that takes messages from an AMQP exchange and
+ broadcasts them to WebSocket clients.
