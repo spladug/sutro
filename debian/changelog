@@ -1,3 +1,9 @@
+sutro (0.1.1) precise; urgency=low
+
+  * Send the configured username to AMQP.
+
+ -- Neil Williams <neil@reddit.com>  Wed, 18 Dec 2013 17:03:55 -0800
+
 sutro (0.1) precise; urgency=low
 
   * Initial release.
