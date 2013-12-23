@@ -6,6 +6,8 @@ import urlparse
 
 import gevent
 import geventwebsocket
+import geventwebsocket.handler
+import geventwebsocket.gunicorn.workers
 
 
 LOG = logging.getLogger(__name__)
@@ -33,6 +35,31 @@ def is_allowed_origin(origin, whitelist):
     return False
 
 
+def is_valid_namespace(environ, mac_secret):
+    namespace = environ.get("PATH_INFO", "")
+    if not namespace:
+        return False
+
+    try:
+        query_string = environ["QUERY_STRING"]
+        params = urlparse.parse_qs(query_string, strict_parsing=True)
+        mac = params["h"][0]
+        expires = params["e"][0]
+        expiration_time = datetime.datetime.utcfromtimestamp(int(expires))
+    except (KeyError, IndexError, ValueError):
+        return
+
+    if expiration_time < datetime.datetime.utcnow():
+        return
+
+    expected_mac = hmac.new(mac_secret, expires + namespace,
+                            hashlib.sha1).hexdigest()
+    if not constant_time_compare(mac, expected_mac):
+        return False
+
+    return True
+
+
 def constant_time_compare(actual, expected):
     """Return whether or not two strings match.
 
@@ -48,6 +75,24 @@ def constant_time_compare(actual, expected):
         for i in xrange(actual_len):
             result |= ord(actual[i]) ^ ord(expected[i % expected_len])
     return result == 0
+
+
+class SutroWebSocketHandler(geventwebsocket.handler.WebSocketHandler):
+    def upgrade_connection(self):
+        origin = self.environ.get("HTTP_ORIGIN", "")
+        if not is_allowed_origin(origin, self.application.allowed_origins):
+            LOG.info("rejected connection from %s due to bad origin %r",
+                     self.environ["REMOTE_ADDR"], origin)
+            self.start_response("403 Forbidden", [])
+            return ["Forbidden"]
+
+        if not is_valid_namespace(self.environ, self.application.mac_secret):
+            LOG.info("rejected connection from %s due to invalid namespace",
+                     self.environ["REMOTE_ADDR"])
+            self.start_response("403 Forbidden", [])
+            return ["Forbidden"]
+
+        return super(SutroWebSocketHandler, self).upgrade_connection()
 
 
 class SocketServer(object):
@@ -70,30 +115,6 @@ class SocketServer(object):
             if not websocket.closed:
                 websocket.close()
 
-    def _get_validated_namespace(self, environ):
-        namespace = environ.get("PATH_INFO", "")
-        if not namespace:
-            return
-
-        try:
-            query_string = environ["QUERY_STRING"]
-            params = urlparse.parse_qs(query_string, strict_parsing=True)
-            mac = params["h"][0]
-            expires = params["e"][0]
-            expiration_time = datetime.datetime.utcfromtimestamp(int(expires))
-        except (KeyError, IndexError, ValueError):
-            return
-
-        if expiration_time < datetime.datetime.utcnow():
-            return
-
-        expected_mac = hmac.new(self.mac_secret, expires + namespace,
-                                hashlib.sha1).hexdigest()
-        if not constant_time_compare(mac, expected_mac):
-            return
-
-        return namespace
-
     def __call__(self, environ, start_response):
         websocket = environ.get("wsgi.websocket")
 
@@ -101,19 +122,7 @@ class SocketServer(object):
             start_response("400 Bad Request", [])
             return ["you are not a websocket"]
 
-        if not is_allowed_origin(websocket.origin, self.allowed_origins):
-            LOG.info("rejected connection from %s due to bad origin %r",
-                     environ["REMOTE_ADDR"], websocket.origin)
-            websocket.close(4003)
-            return
-
-        namespace = self._get_validated_namespace(environ)
-        if not namespace:
-            LOG.info("rejected connection from %s due to invalid namespace",
-                     environ["REMOTE_ADDR"])
-            websocket.close(4003)
-            return
-
+        namespace = environ["PATH_INFO"]
         listener = gevent.spawn(self.send_broadcasts, websocket, namespace)
         try:
             self.pump_messages(websocket)
@@ -121,3 +130,7 @@ class SocketServer(object):
             LOG.debug("receive failed: %r", e)
         finally:
             listener.kill(block=True)
+
+
+class SutroWorker(geventwebsocket.gunicorn.workers.GeventWebSocketWorker):
+    wsgi_handler = SutroWebSocketHandler
