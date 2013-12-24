@@ -32,26 +32,26 @@ CONFIG_SPEC = {
 def make_app(global_config, **local_config):
     config = parse_config(local_config, CONFIG_SPEC)
 
-    stats = StatsClient(config.stats.host, config.stats.port)
+    stats = StatsClient(config["stats"]["host"], config["stats"]["port"])
 
     dispatcher = MessageDispatcher(
         stats=stats,
     )
 
     source = MessageSource(
-        host=config.amqp.host,
-        port=config.amqp.port,
-        vhost=config.amqp.vhost,
-        username=config.amqp.username,
-        password=config.amqp.password,
+        host=config["amqp"]["host"],
+        port=config["amqp"]["port"],
+        vhost=config["amqp"]["vhost"],
+        username=config["amqp"]["username"],
+        password=config["amqp"]["password"],
         message_handler=dispatcher.on_message_received,
     )
 
     app = SocketServer(
         dispatcher=dispatcher,
-        allowed_origins=config.web.allowed_origins,
-        mac_secret=config.web.mac_secret,
-        ping_interval=config.web.ping_interval,
+        allowed_origins=config["web"]["allowed_origins"],
+        mac_secret=config["web"]["mac_secret"],
+        ping_interval=config["web"]["ping_interval"],
     )
 
     gevent.spawn(source.pump_messages)

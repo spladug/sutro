@@ -7,14 +7,8 @@ class ConfigurationError(Exception):
         return "%s: %s" % (self.key, self.error)
 
 
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-        self.__dict__ = self
-
-
 def parse_config(config, spec, root=None):
-    parsed = AttrDict()
+    parsed = {}
     for key, parser_or_spec in spec.iteritems():
         if root:
             key_path = "%s.%s" % (root, key)
