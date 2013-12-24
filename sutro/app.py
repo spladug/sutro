@@ -1,6 +1,6 @@
 import gevent
 
-from .config import parse_config, comma_delimited, base64, seconds
+from .config import parse_config, comma_delimited, base64
 from .dispatcher import MessageDispatcher
 from .socketserver import SocketServer
 from .source import MessageSource
@@ -19,7 +19,6 @@ CONFIG_SPEC = {
     "web": {
         "allowed_origins": comma_delimited,
         "mac_secret": base64,
-        "max_mac_age": seconds,
     },
 
     "stats": {
@@ -51,7 +50,6 @@ def make_app(global_config, **local_config):
         dispatcher=dispatcher,
         allowed_origins=config.web.allowed_origins,
         mac_secret=config.web.mac_secret,
-        max_mac_age=config.web.max_mac_age,
     )
 
     gevent.spawn(source.pump_messages)

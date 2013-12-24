@@ -51,11 +51,10 @@ def constant_time_compare(actual, expected):
 
 
 class SocketServer(object):
-    def __init__(self, dispatcher, allowed_origins, mac_secret, max_mac_age):
+    def __init__(self, dispatcher, allowed_origins, mac_secret):
         self.dispatcher = dispatcher
         self.allowed_origins = allowed_origins
         self.mac_secret = mac_secret
-        self.max_mac_age = max_mac_age
 
     def pump_messages(self, websocket):
         while websocket.receive():
@@ -79,17 +78,16 @@ class SocketServer(object):
         try:
             query_string = environ["QUERY_STRING"]
             params = urlparse.parse_qs(query_string, strict_parsing=True)
-            time = params["t"][0]
             mac = params["h"][0]
-            mac_time = datetime.datetime.utcfromtimestamp(int(time))
+            expires = params["e"][0]
+            expiration_time = datetime.datetime.utcfromtimestamp(int(expires))
         except (KeyError, IndexError, ValueError):
             return
 
-        cutoff = datetime.datetime.utcnow() - self.max_mac_age
-        if mac_time < cutoff:
+        if expiration_time < datetime.datetime.utcnow():
             return
 
-        expected_mac = hmac.new(self.mac_secret, time + namespace,
+        expected_mac = hmac.new(self.mac_secret, expires + namespace,
                                 hashlib.sha1).hexdigest()
         if not constant_time_compare(mac, expected_mac):
             return

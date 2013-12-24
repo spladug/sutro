@@ -48,8 +48,3 @@ def base64(text):
 
 def comma_delimited(text):
     return [x.strip() for x in text.split(",")]
-
-
-def seconds(text):
-    import datetime
-    return datetime.timedelta(seconds=int(text))
