@@ -19,6 +19,7 @@ CONFIG_SPEC = {
     "web": {
         "allowed_origins": comma_delimited,
         "mac_secret": base64,
+        "ping_interval": int,
     },
 
     "stats": {
@@ -50,6 +51,7 @@ def make_app(global_config, **local_config):
         dispatcher=dispatcher,
         allowed_origins=config.web.allowed_origins,
         mac_secret=config.web.mac_secret,
+        ping_interval=config.web.ping_interval,
     )
 
     gevent.spawn(source.pump_messages)

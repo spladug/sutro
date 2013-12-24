@@ -1,3 +1,5 @@
+import random
+
 import gevent.queue
 
 
@@ -13,13 +15,19 @@ class MessageDispatcher(object):
             for consumer in consumers:
                 consumer.put(message)
 
-    def listen(self, namespace):
+    def listen(self, namespace, max_timeout):
         queue = gevent.queue.Queue()
         self.consumers.setdefault(namespace, []).append(queue)
 
         try:
             while True:
-                yield queue.get(block=True)
+                # jitter the timeout a bit to ensure we don't herd
+                timeout = max_timeout - random.uniform(0, max_timeout / 2)
+
+                try:
+                    yield queue.get(block=True, timeout=timeout)
+                except gevent.queue.Empty:
+                    yield None
         finally:
             self.consumers[namespace].remove(queue)
             if not self.consumers[namespace]:

@@ -4,7 +4,6 @@ import hmac
 import logging
 import urlparse
 
-import gevent
 import geventwebsocket
 import geventwebsocket.handler
 import geventwebsocket.gunicorn.workers
@@ -96,40 +95,28 @@ class SutroWebSocketHandler(geventwebsocket.handler.WebSocketHandler):
 
 
 class SocketServer(object):
-    def __init__(self, dispatcher, allowed_origins, mac_secret):
+    def __init__(self, dispatcher, allowed_origins, mac_secret, ping_interval):
         self.dispatcher = dispatcher
         self.allowed_origins = allowed_origins
         self.mac_secret = mac_secret
-
-    def pump_messages(self, websocket):
-        while websocket.receive():
-            gevent.sleep()
-
-    def send_broadcasts(self, websocket, namespace):
-        try:
-            for msg in self.dispatcher.listen(namespace):
-                websocket.send(msg)
-        except geventwebsocket.WebSocketError as e:
-            LOG.debug("send failed: %r", e)
-        finally:
-            if not websocket.closed:
-                websocket.close()
+        self.ping_interval = ping_interval
 
     def __call__(self, environ, start_response):
         websocket = environ.get("wsgi.websocket")
-
         if not websocket:
             start_response("400 Bad Request", [])
             return ["you are not a websocket"]
 
         namespace = environ["PATH_INFO"]
-        listener = gevent.spawn(self.send_broadcasts, websocket, namespace)
         try:
-            self.pump_messages(websocket)
+            for msg in self.dispatcher.listen(namespace,
+                                              max_timeout=self.ping_interval):
+                if msg is not None:
+                    websocket.send(msg)
+                else:
+                    websocket.send_frame("", websocket.OPCODE_PING)
         except geventwebsocket.WebSocketError as e:
-            LOG.debug("receive failed: %r", e)
-        finally:
-            listener.kill(block=True)
+            LOG.debug("socket failed: %r", e)
 
 
 class SutroWorker(geventwebsocket.gunicorn.workers.GeventWebSocketWorker):
