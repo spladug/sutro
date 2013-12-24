@@ -28,6 +28,9 @@ class MessageDispatcher(object):
                     yield queue.get(block=True, timeout=timeout)
                 except gevent.queue.Empty:
                     yield None
+
+                # ensure we're not starving others by spinning
+                gevent.sleep()
         finally:
             self.consumers[namespace].remove(queue)
             if not self.consumers[namespace]:
