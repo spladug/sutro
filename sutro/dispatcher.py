@@ -8,6 +8,9 @@ class MessageDispatcher(object):
         self.consumers = {}
         self.stats = stats
 
+    def get_connection_count(self):
+        return sum(len(sockets) for sockets in self.consumers.itervalues())
+
     def on_message_received(self, namespace, message):
         consumers = self.consumers.get(namespace, [])
 

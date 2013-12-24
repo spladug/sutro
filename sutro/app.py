@@ -4,7 +4,7 @@ from .config import parse_config, comma_delimited, base64
 from .dispatcher import MessageDispatcher
 from .socketserver import SocketServer
 from .source import MessageSource
-from .stats import StatsClient
+from .stats import StatsClient, StatsCollector
 
 
 CONFIG_SPEC = {
@@ -48,12 +48,19 @@ def make_app(global_config, **local_config):
     )
 
     app = SocketServer(
+        stats=stats,
         dispatcher=dispatcher,
         allowed_origins=config["web"]["allowed_origins"],
         mac_secret=config["web"]["mac_secret"],
         ping_interval=config["web"]["ping_interval"],
     )
 
+    collector = StatsCollector(
+        stats=stats,
+        dispatcher=dispatcher,
+    )
+
     gevent.spawn(source.pump_messages)
+    gevent.spawn(collector.collect_and_report_periodically)
 
     return app
