@@ -59,7 +59,7 @@ class MessageSource(object):
 
     def _on_message(self, message):
         decoded = message.body.decode("utf-8")
-        namespace = message.properties["application_headers"]["namespace"]
+        namespace = message.delivery_info["routing_key"]
         self.message_handler(namespace=namespace, message=decoded)
 
     def _on_close(self):
