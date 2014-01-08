@@ -1,3 +1,12 @@
+sutro (0.2) precise; urgency=low
+
+  * per-message mac signals
+  * leaner connection processing
+  * periodic server-sent pings
+  * more stats
+
+ -- Neil Williams <neil@reddit.com>  Tue, 07 Jan 2014 16:09:54 -0800
+
 sutro (0.1.1) precise; urgency=low
 
   * Send the configured username to AMQP.
