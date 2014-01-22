@@ -120,7 +120,7 @@ class SocketServer(object):
                 if msg is not None:
                     websocket.send(msg)
                 else:
-                    websocket.send_frame("", websocket.OPCODE_PING)
+                    websocket.send_frame("", websocket.OPCODE_PONG)
         except geventwebsocket.WebSocketError as e:
             LOG.debug("socket failed: %r", e)
         finally:
