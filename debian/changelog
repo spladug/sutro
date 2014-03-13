@@ -1,3 +1,9 @@
+sutro (0.3) precise; urgency=low
+
+  * make sockets receive messages for more general namespaces as well
+
+ -- Neil Williams <neil@reddit.com>  Thu, 13 Mar 2014 13:36:05 -0700
+
 sutro (0.2.1) precise; urgency=low
 
   * send PONGs instead of PINGs
