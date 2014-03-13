@@ -1,6 +1,16 @@
+import posixpath
 import random
 
 import gevent.queue
+
+
+def _walk_namespace_hierarchy(namespace):
+    assert namespace.startswith("/")
+
+    yield namespace
+    while namespace != "/":
+        namespace = posixpath.dirname(namespace)
+        yield namespace
 
 
 class MessageDispatcher(object):
@@ -20,7 +30,10 @@ class MessageDispatcher(object):
 
     def listen(self, namespace, max_timeout):
         queue = gevent.queue.Queue()
-        self.consumers.setdefault(namespace, []).append(queue)
+
+        namespace = namespace.rstrip("/")
+        for ns in _walk_namespace_hierarchy(namespace):
+            self.consumers.setdefault(ns, []).append(queue)
 
         try:
             while True:
@@ -35,6 +48,7 @@ class MessageDispatcher(object):
                 # ensure we're not starving others by spinning
                 gevent.sleep()
         finally:
-            self.consumers[namespace].remove(queue)
-            if not self.consumers[namespace]:
-                del self.consumers[namespace]
+            for ns in _walk_namespace_hierarchy(namespace):
+                self.consumers[ns].remove(queue)
+                if not self.consumers[ns]:
+                    del self.consumers[ns]
