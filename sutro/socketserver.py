@@ -17,6 +17,10 @@ def is_subdomain(domain, base_domain):
 
 
 def is_allowed_origin(origin, whitelist):
+    # if there's no whitelist, assume all is ok
+    if not whitelist:
+        return True
+
     try:
         parsed = urlparse.urlparse(origin)
     except ValueError:

@@ -41,4 +41,4 @@ def base64(text):
 
 
 def comma_delimited(text):
-    return [x.strip() for x in text.split(",")]
+    return filter(None, [x.strip() for x in text.split(",")])
