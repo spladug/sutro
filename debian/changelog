@@ -1,3 +1,9 @@
+sutro (0.4) precise; urgency=low
+
+  * if no origin whitelist specified, allow all origins
+
+ -- Neil Williams <neil@reddit.com>  Mon, 28 Jul 2014 21:28:05 -0700
+
 sutro (0.3) precise; urgency=low
 
   * make sockets receive messages for more general namespaces as well
